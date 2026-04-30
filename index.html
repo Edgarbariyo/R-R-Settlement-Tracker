@@ -879,6 +879,7 @@ async function doLogin() {
       return;
     }
     currentUser = users[0];
+    localStorage.setItem('ppb_session', JSON.stringify(currentUser));
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('appShell').classList.remove('hidden');
     document.getElementById('navName').textContent = currentUser.full_name;
@@ -923,6 +924,7 @@ function showLoginError(msg) {
 
 function doLogout() {
   currentUser = null; records = [];
+  localStorage.removeItem('ppb_session');
   document.getElementById('appShell').classList.add('hidden');
   document.getElementById('loginScreen').classList.remove('hidden');
   document.getElementById('loginUsername').value = '';
@@ -1572,6 +1574,59 @@ async function deleteUser(id, name) {
     toast('Failed to delete user: ' + e.message, 'error');
   }
 }
+
+// ── SESSION RESTORE ON PAGE LOAD ──
+async function restoreSession() {
+  const saved = localStorage.getItem('ppb_session');
+  if (!saved) return; // no saved session, show login
+  try {
+    const user = JSON.parse(saved);
+    // Re-validate user still exists in DB
+    const users = await sb(`app_users?id=eq.${user.id}&select=id,username,full_name,role`);
+    if (!users || users.length === 0) {
+      localStorage.removeItem('ppb_session');
+      return;
+    }
+    currentUser = users[0];
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('appShell').classList.remove('hidden');
+    document.getElementById('navName').textContent = currentUser.full_name;
+    document.getElementById('navAvatar').textContent = currentUser.full_name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+
+    // Role-based UI
+    if (currentUser.role === 'readonly') {
+      document.getElementById('navNewFiling').style.display = 'none';
+      document.getElementById('dashNewBtn').style.display = 'none';
+      document.getElementById('recordsNewBtn').style.display = 'none';
+      document.getElementById('submitBtn').style.display = 'none';
+    }
+    if (currentUser.role === 'approver') {
+      document.getElementById('navNewFiling').style.display = 'none';
+      document.getElementById('dashNewBtn').style.display = 'none';
+      document.getElementById('recordsNewBtn').style.display = 'none';
+      document.getElementById('submitBtn').style.display = 'none';
+    }
+    if (currentUser.role === 'admin') {
+      document.getElementById('navUsers').classList.remove('hidden');
+      document.getElementById('adminSection').style.display = '';
+    }
+
+    const now = new Date();
+    document.getElementById('f-date').valueAsDate = now;
+    document.getElementById('f-approval-date').valueAsDate = now;
+    document.getElementById('f-update-time').value = now.toISOString().slice(0,16);
+    document.getElementById('navDate').textContent = now.toLocaleDateString('en-UG',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+    document.getElementById('f-submitted-by').value = currentUser.full_name;
+
+    await loadRecords();
+  } catch(e) {
+    localStorage.removeItem('ppb_session');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  restoreSession();
+});
 </script>
 </body>
 </html>
