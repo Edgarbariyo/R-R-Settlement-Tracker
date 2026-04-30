@@ -258,7 +258,7 @@ tr:hover td{background:#FAFBFD;}
     <!-- ═══ DASHBOARD ═══ -->
     <div id="view-dashboard">
       <div class="section-header">
-        <div class="section-title">Overview <span>/ Dashboard</span></div>
+        <div class="section-title">Overview <span id="dashSubtitle">/ Dashboard</span></div>
         <button class="btn btn-primary" onclick="showView('new')" id="dashNewBtn">＋ New Filing</button>
       </div>
       <div class="cards">
@@ -678,6 +678,7 @@ tr:hover td{background:#FAFBFD;}
               <select id="u-role" class="form-select">
                 <option value="">Select role…</option>
                 <option value="user">User — can submit filings</option>
+                <option value="approver">Approver — can approve &amp; flag</option>
                 <option value="readonly">View Only — read only access</option>
               </select>
             </div>
@@ -890,6 +891,12 @@ async function doLogin() {
       document.getElementById('recordsNewBtn').style.display = 'none';
       document.getElementById('submitBtn').style.display = 'none';
     }
+    if (currentUser.role === 'approver') {
+      document.getElementById('navNewFiling').style.display = 'none';
+      document.getElementById('dashNewBtn').style.display = 'none';
+      document.getElementById('recordsNewBtn').style.display = 'none';
+      document.getElementById('submitBtn').style.display = 'none';
+    }
     if (currentUser.role === 'admin') {
       document.getElementById('navUsers').classList.remove('hidden');
       document.getElementById('adminSection').style.display = '';
@@ -929,7 +936,12 @@ function doLogout() {
 async function loadRecords() {
   showLoading('Loading settlements…');
   try {
-    const data = await sb('ppb_settlements?select=*&order=created_at.desc');
+    let query = 'ppb_settlements?select=*&order=created_at.desc';
+    // Approvers only see their own assigned filings
+    if (currentUser?.role === 'approver') {
+      query += `&approver=eq.${encodeURIComponent(currentUser.full_name)}`;
+    }
+    const data = await sb(query);
     records = (data || []).map(dbToLocal);
     updateStats(); renderDashboard();
     hideLoading();
@@ -1105,13 +1117,13 @@ async function submitEntry() {
 
 // ── APPROVE / FLAG ──
 function openApprove(ref) {
-  if (currentUser?.role === 'readonly') { toast('You do not have permission to approve.','error'); return; }
+  if (!['admin','approver'].includes(currentUser?.role)) { toast('You do not have permission to approve.','error'); return; }
   currentRef = ref;
   document.getElementById('approveNote').value = '';
   openModal('approveModal');
 }
 function openFlag(ref) {
-  if (currentUser?.role === 'readonly') { toast('You do not have permission to flag.','error'); return; }
+  if (!['admin','approver'].includes(currentUser?.role)) { toast('You do not have permission to flag.','error'); return; }
   currentRef = ref;
   document.getElementById('flagReason').value = '';
   document.getElementById('flagNote').value = '';
@@ -1243,6 +1255,11 @@ function updateStats(){
   document.getElementById('statApproved').textContent=a;
   document.getElementById('statFlagged').textContent=f;
   document.getElementById('pendingBadge').textContent=p;
+  // Approver context
+  const subtitle = document.getElementById('dashSubtitle');
+  if (subtitle && currentUser?.role === 'approver') {
+    subtitle.textContent = `/ Your Filings${p > 0 ? ` — ${p} awaiting your action` : ''}`;
+  }
 }
 
 // ── DASHBOARD ──
@@ -1305,6 +1322,8 @@ function renderRecords(){
 
 function actionBtns(r){
   if (currentUser?.role === 'readonly') return `<span style="font-size:11.5px;color:var(--gray-500);">View Only</span>`;
+  if (currentUser?.role === 'user') return `<span style="font-size:11.5px;color:var(--gray-500);">${r.status}</span>`;
+  // admin and approver can approve/flag
   return r.status==='Pending'
     ?`<div style="display:flex;gap:4px;"><button class="btn btn-approve btn-sm" onclick="openApprove('${r.ref}')">✅</button><button class="btn btn-flag btn-sm" onclick="openFlag('${r.ref}')">🚩</button></div>`
     :`<span style="font-size:11.5px;color:var(--gray-500);">${r.status}</span>`;
@@ -1483,6 +1502,7 @@ function renderUsers(users) {
 
   const roleBadge = r => {
     if (r === 'admin') return `<span class="badge" style="background:#EDE9FE;color:#5B21B6;">👑 Admin</span>`;
+    if (r === 'approver') return `<span class="badge" style="background:#E0F2FE;color:#0369A1;">✅ Approver</span>`;
     if (r === 'readonly') return `<span class="badge badge-pending">👁 View Only</span>`;
     return `<span class="badge badge-approved">✏️ User</span>`;
   };
