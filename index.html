@@ -1218,9 +1218,8 @@ async function submitEntry() {
       status: (()=>{
         const recv = +v('f-total-received')||0;
         const appr = +v('f-approved-amt')||0;
-        if(appr > 0 && recv >= appr) return 'Settled';
-        if(recv > 0) return 'In Progress';
-        return 'Pending';
+        const outstanding = Math.max(0, appr - recv);
+        return outstanding === 0 && appr > 0 ? 'Settled' : 'In Progress';
       })(),
       docs: docPaths,
       updated_at: new Date().toISOString()
@@ -1736,7 +1735,8 @@ function previewPayment() {
 
   const newTotal = r.totalReceived + newAmt;
   const newOutstanding = Math.max(0, r.approvedAmt - newTotal);
-  const newStatus = newTotal >= r.approvedAmt ? 'Settled' : newTotal > 0 ? 'In Progress' : 'Pending';
+  const newOutstanding2 = Math.max(0, r.approvedAmt - newTotal);
+  const newStatus = (newOutstanding2 === 0 && r.approvedAmt > 0) ? 'Settled' : 'In Progress';
 
   document.getElementById('pay-new-total').textContent = fmt(newTotal) + ' ' + r.currency;
   document.getElementById('pay-new-outstanding').textContent = fmt(newOutstanding) + ' ' + r.currency;
@@ -1765,7 +1765,7 @@ async function confirmPayment() {
   try {
     const newTotal = r.totalReceived + newAmt;
     const newOutstanding = Math.max(0, r.approvedAmt - newTotal);
-    const newStatus = newTotal >= r.approvedAmt ? 'Settled' : 'In Progress';
+    const newStatus = Math.max(0, r.approvedAmt - newTotal) === 0 && r.approvedAmt > 0 ? 'Settled' : 'In Progress';
 
     // Calculate instalments paid if instalment info exists
     let newInstPaid = r.instalmentsPaid;
@@ -1912,7 +1912,7 @@ async function confirmEdit() {
     const approvedAmt = +document.getElementById('e-approved').value || 0;
     const instPaid = +document.getElementById('e-inst-paid').value || 0;
     const newOutstanding = Math.max(0, approvedAmt - totalRecv);
-    const newStatus = totalRecv >= approvedAmt && approvedAmt > 0 ? 'Settled' : totalRecv > 0 ? 'In Progress' : 'Pending';
+    const newStatus = Math.max(0, approvedAmt - totalRecv) === 0 && approvedAmt > 0 ? 'Settled' : 'In Progress';
     const newInstRemaining = r.numInstalments ? Math.max(0, r.numInstalments - instPaid) : r.instalmentsRemaining;
 
     await sb(`ppb_settlements?id=eq.${r.id}`, {
