@@ -249,8 +249,8 @@ tr:hover td{background:#FAFBFD;}
     <div class="nav-item hidden" id="navUsers" onclick="showView('users')"><span class="icon">👥</span> Manage Users</div>
     <div class="sidebar-label" style="margin-top:12px;">Filter by Status</div>
     <div class="nav-item" onclick="filterView('Pending')"><span class="icon">🕐</span> Pending</div>
-    <div class="nav-item" onclick="filterView('Approved')"><span class="icon">✅</span> Approved</div>
-    <div class="nav-item" onclick="filterView('Flagged')"><span class="icon">🚩</span> Flagged</div>
+    <div class="nav-item" onclick="filterView('In Progress')"><span class="icon">⏳</span> In Progress</div>
+    <div class="nav-item" onclick="filterView('Settled')"><span class="icon">✅</span> Settled</div>
   </aside>
 
   <main class="main">
@@ -264,8 +264,8 @@ tr:hover td{background:#FAFBFD;}
       <div class="cards">
         <div class="card"><div class="card-label">Total Filings</div><div class="card-value blue" id="statTotal">—</div><div class="card-sub">All time</div><div class="card-bar"><div class="card-bar-fill" style="width:100%;background:var(--blue);"></div></div></div>
         <div class="card"><div class="card-label">Pending</div><div class="card-value amber" id="statPending">—</div><div class="card-sub">Awaiting action</div><div class="card-bar"><div class="card-bar-fill" style="width:55%;background:var(--amber);"></div></div></div>
-        <div class="card"><div class="card-label">Approved</div><div class="card-value green" id="statApproved">—</div><div class="card-sub">Cleared</div><div class="card-bar"><div class="card-bar-fill" style="width:75%;background:var(--green);"></div></div></div>
-        <div class="card"><div class="card-label">Flagged</div><div class="card-value red" id="statFlagged">—</div><div class="card-sub">Needs escalation</div><div class="card-bar"><div class="card-bar-fill" style="width:20%;background:var(--red);"></div></div></div>
+        <div class="card"><div class="card-label">Settled</div><div class="card-value green" id="statApproved">—</div><div class="card-sub">Fully received</div><div class="card-bar"><div class="card-bar-fill" style="width:75%;background:var(--green);"></div></div></div>
+        <div class="card"><div class="card-label">In Progress</div><div class="card-value red" id="statFlagged">—</div><div class="card-sub">Partial payment</div><div class="card-bar"><div class="card-bar-fill" style="width:20%;background:var(--red);"></div></div></div>
       </div>
       <div class="panel">
         <div class="panel-head"><span class="panel-title">Recent Filings</span><button class="btn btn-ghost btn-sm" onclick="showView('records')">View All →</button></div>
@@ -545,15 +545,7 @@ tr:hover td{background:#FAFBFD;}
                 <option>KWIKIRIZA CHRISTINE</option>
               </select>
             </div>
-            <div class="form-group">
-              <label class="form-label">Settlement Notification</label>
-              <select id="f-notification" class="form-select">
-                <option value="">Select…</option>
-                <option>Sent</option>
-                <option>Pending</option>
-                <option>Not Required</option>
-              </select>
-            </div>
+
             <div class="form-group">
               <label class="form-label">Extension</label>
               <select id="f-extension" class="form-select" onchange="toggleExtDate()">
@@ -611,8 +603,8 @@ tr:hover td{background:#FAFBFD;}
           <div class="tabs">
             <div class="tab active" id="tab-all" onclick="setTab('all')">All</div>
             <div class="tab" id="tab-Pending" onclick="setTab('Pending')">Pending</div>
-            <div class="tab" id="tab-Approved" onclick="setTab('Approved')">Approved</div>
-            <div class="tab" id="tab-Flagged" onclick="setTab('Flagged')">Flagged</div>
+            <div class="tab" id="tab-In Progress" onclick="setTab('In Progress')">In Progress</div>
+            <div class="tab" id="tab-Settled" onclick="setTab('Settled')">Settled</div>
           </div>
           <div class="filter-bar">
             <div class="search-wrap">
@@ -678,7 +670,6 @@ tr:hover td{background:#FAFBFD;}
               <select id="u-role" class="form-select">
                 <option value="">Select role…</option>
                 <option value="user">User — can submit filings</option>
-                <option value="approver">Approver — can approve &amp; flag</option>
                 <option value="readonly">View Only — read only access</option>
               </select>
             </div>
@@ -736,22 +727,7 @@ tr:hover td{background:#FAFBFD;}
   </div>
 </div>
 
-<!-- APPROVE MODAL -->
-<div class="modal-backdrop" id="approveModal">
-  <div class="modal" style="width:460px;">
-    <div class="modal-head"><span class="modal-title">✅ Approve Settlement</span><button class="modal-close" onclick="closeModal('approveModal')">✕</button></div>
-    <div class="modal-body">
-      <p style="color:var(--gray-700);margin-bottom:16px;font-size:14px;">Confirm this settlement record is correct before approving.</p>
-      <div class="form-group"><label class="form-label">Approval Note (optional)</label><textarea id="approveNote" class="form-textarea" placeholder="Add a note for the audit trail…"></textarea></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('approveModal')">Cancel</button>
-      <button class="btn btn-approve" id="confirmApproveBtn" onclick="confirmApprove()">✅ Confirm Approval</button>
-    </div>
-  </div>
-</div>
-
-<!-- FLAG MODAL -->
+<!-- APPROVE/FLAG MODALS REMOVED -->
 <div class="modal-backdrop" id="flagModal">
   <div class="modal" style="width:460px;">
     <div class="modal-head"><span class="modal-title">🚩 Flag Settlement</span><button class="modal-close" onclick="closeModal('flagModal')">✕</button></div>
@@ -1092,11 +1068,16 @@ async function submitEntry() {
       instalments_paid: paid || null,
       instalments_remaining: numInst ? Math.max(0, numInst - paid) : null,
       approver: v('f-approver'),
-      notification: v('f-notification'),
       extension: v('f-extension'),
       ext_date: v('f-ext-date') || null,
       comments: v('f-comments'),
-      status: 'Pending',
+      status: (()=>{
+        const recv = +v('f-total-received')||0;
+        const appr = +v('f-approved-amt')||0;
+        if(appr > 0 && recv >= appr) return 'Settled';
+        if(recv > 0) return 'In Progress';
+        return 'Pending';
+      })(),
       docs: docPaths,
       updated_at: new Date().toISOString()
     };
@@ -1221,7 +1202,9 @@ function hideLoading(){document.getElementById('loadingOverlay').classList.add('
 // ── HELPERS ──
 function v(id){return document.getElementById(id)?.value||'';}
 function fmt(n){return Number(n||0).toLocaleString('en-UG');}
-function badge(s){const m={Pending:'badge-pending',Approved:'badge-approved',Flagged:'badge-flagged'};return `<span class="badge ${m[s]||''}"><span class="badge-dot"></span>${s}</span>`;}
+function badge(s){const m={Pending:'badge-pending','In Progress':'badge-pending',Settled:'badge-approved',Approved:'badge-approved',Flagged:'badge-flagged'};
+  const icons={Pending:'🕐','In Progress':'⏳',Settled:'✅',Approved:'✅',Flagged:'🚩'};
+  return `<span class="badge ${m[s]||''}"><span style="font-size:11px;">${icons[s]||''}</span> ${s}</span>`;}
 
 // ── AUTO-CALC ──
 function calcDifference(){const p=+v('f-payoff')||0,a=+v('f-approved-amt')||0;document.getElementById('f-difference').value=p&&a?(p-a):'';}
@@ -1250,18 +1233,14 @@ function filterView(s){showView('records');currentTab=s;updateTabUI();renderReco
 // ── STATS ──
 function updateStats(){
   const p=records.filter(r=>r.status==='Pending').length;
-  const a=records.filter(r=>r.status==='Approved').length;
+  const ip=records.filter(r=>r.status==='In Progress').length;
+  const s=records.filter(r=>r.status==='Settled').length;
   const f=records.filter(r=>r.status==='Flagged').length;
   document.getElementById('statTotal').textContent=records.length;
   document.getElementById('statPending').textContent=p;
-  document.getElementById('statApproved').textContent=a;
-  document.getElementById('statFlagged').textContent=f;
-  document.getElementById('pendingBadge').textContent=p;
-  // Approver context
-  const subtitle = document.getElementById('dashSubtitle');
-  if (subtitle && currentUser?.role === 'approver') {
-    subtitle.textContent = `/ Your Filings${p > 0 ? ` — ${p} awaiting your action` : ''}`;
-  }
+  document.getElementById('statApproved').textContent=s;
+  document.getElementById('statFlagged').textContent=ip;
+  document.getElementById('pendingBadge').textContent=p+ip;
 }
 
 // ── DASHBOARD ──
@@ -1285,7 +1264,7 @@ function renderDashboard(){
 
 // ── RECORDS ──
 function setTab(t){currentTab=t;updateTabUI();renderRecords();}
-function updateTabUI(){['all','Pending','Approved','Flagged'].forEach(t=>document.getElementById('tab-'+t)?.classList.toggle('active',t===currentTab));}
+function updateTabUI(){['all','Pending','In Progress','Settled'].forEach(t=>document.getElementById('tab-'+t)?.classList.toggle('active',t===currentTab));}
 
 function renderRecords(){
   const q=((document.getElementById('searchInput')?.value)||'').toLowerCase();
@@ -1323,12 +1302,11 @@ function renderRecords(){
 }
 
 function actionBtns(r){
-  if (currentUser?.role === 'readonly') return `<span style="font-size:11.5px;color:var(--gray-500);">View Only</span>`;
-  if (currentUser?.role === 'user') return `<span style="font-size:11.5px;color:var(--gray-500);">${r.status}</span>`;
-  // admin and approver can approve/flag
-  return r.status==='Pending'
-    ?`<div style="display:flex;gap:4px;"><button class="btn btn-approve btn-sm" onclick="openApprove('${r.ref}')">✅</button><button class="btn btn-flag btn-sm" onclick="openFlag('${r.ref}')">🚩</button></div>`
-    :`<span style="font-size:11.5px;color:var(--gray-500);">${r.status}</span>`;
+  const viewBtn = `<button class="btn btn-ghost btn-sm" onclick="openDetail('${r.ref}')">👁 View</button>`;
+  const deleteBtn = currentUser?.role === 'admin'
+    ? `<button class="btn btn-flag btn-sm" onclick="deleteEntry('${r.ref}')" style="margin-left:4px;">🗑</button>`
+    : '';
+  return `<div style="display:flex;gap:4px;align-items:center;">${viewBtn}${deleteBtn}</div>`;
 }
 
 // ── DETAIL MODAL ──
@@ -1424,7 +1402,6 @@ async function openDetail(ref){
       <div class="detail-section-title">E — Approval, Notifications &amp; Extension</div>
       <div class="detail-grid">
         ${dl('Approver Name',r.approver)}
-        ${dl('Settlement Notification',r.notification||'—')}
         ${dl('Extension',r.extension||'—')}
         ${dl('Date of Extension',r.extDate||'—')}
         ${dl('Comments',r.comments||'—')}
@@ -1572,6 +1549,33 @@ async function deleteUser(id, name) {
     await loadUsers();
   } catch(e) {
     toast('Failed to delete user: ' + e.message, 'error');
+  }
+}
+
+// ── DELETE ENTRY ──
+async function deleteEntry(ref) {
+  const r = records.find(x => x.ref === ref);
+  if (!r) return;
+  if (!confirm(`Delete filing ${ref} for ${r.name}?\n\nThis cannot be undone.`)) return;
+
+  try {
+    // Delete any uploaded docs from storage first
+    for (const path of (r.docs || [])) {
+      await fetch(`${SUPA_URL}/storage/v1/object/${BUCKET}/${path}`, {
+        method: 'DELETE',
+        headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+      });
+    }
+    // Delete the record
+    await sb(`ppb_settlements?id=eq.${r.id}`, {
+      method: 'DELETE',
+      headers: { 'Prefer': '' }
+    });
+    toast(`${ref} deleted successfully.`, 'success');
+    await loadRecords();
+    renderRecords();
+  } catch(e) {
+    toast('Failed to delete: ' + e.message, 'error');
   }
 }
 
