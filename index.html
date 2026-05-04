@@ -248,7 +248,6 @@ tr:hover td{background:#FAFBFD;}
     <div class="sidebar-label" id="adminSection" style="margin-top:12px;display:none;">Admin</div>
     <div class="nav-item hidden" id="navUsers" onclick="showView('users')"><span class="icon">👥</span> Manage Users</div>
     <div class="sidebar-label" style="margin-top:12px;">Filter by Status</div>
-    <div class="nav-item" onclick="filterView('Pending')"><span class="icon">🕐</span> Pending</div>
     <div class="nav-item" onclick="filterView('In Progress')"><span class="icon">⏳</span> In Progress</div>
     <div class="nav-item" onclick="filterView('Settled')"><span class="icon">✅</span> Settled</div>
   </aside>
@@ -405,12 +404,13 @@ tr:hover td{background:#FAFBFD;}
             <div class="form-group">
               <label class="form-label">Account To Be Credited <span class="req">*</span></label>
               <div class="radio-group" id="f-credit-acct-group">
-                <label class="radio-item"><input type="radio" name="credit-acct" value="031000UGX5108001"/> 031000UGX5108001</label>
-                <label class="radio-item"><input type="radio" name="credit-acct" value="031000USD5108001"/> 031000USD5108001</label>
-                <label class="radio-item"><input type="radio" name="credit-acct" value="8035108001005"/> 8035108001005</label>
-                <label class="radio-item"><input type="radio" name="credit-acct" value="8035108001105"/> 8035108001105</label>
-                <label class="radio-item"><input type="radio" name="credit-acct" value="Other"/> Other</label>
+                <label class="radio-item"><input type="radio" name="credit-acct" value="031000UGX5108001" onchange="toggleOtherAcct()"/> 031000UGX5108001</label>
+                <label class="radio-item"><input type="radio" name="credit-acct" value="031000USD5108001" onchange="toggleOtherAcct()"/> 031000USD5108001</label>
+                <label class="radio-item"><input type="radio" name="credit-acct" value="8035108001005" onchange="toggleOtherAcct()"/> 8035108001005</label>
+                <label class="radio-item"><input type="radio" name="credit-acct" value="8035108001105" onchange="toggleOtherAcct()"/> 8035108001105</label>
+                <label class="radio-item"><input type="radio" name="credit-acct" value="Other" onchange="toggleOtherAcct()"/> Other</label>
               </div>
+              <input id="f-credit-other" class="form-input" type="text" placeholder="Enter account number…" style="display:none;margin-top:8px;"/>
             </div>
           </div>
         </div>
@@ -602,7 +602,6 @@ tr:hover td{background:#FAFBFD;}
         <div class="panel-body">
           <div class="tabs">
             <div class="tab active" id="tab-all" onclick="setTab('all')">All</div>
-            <div class="tab" id="tab-Pending" onclick="setTab('Pending')">Pending</div>
             <div class="tab" id="tab-In Progress" onclick="setTab('In Progress')">In Progress</div>
             <div class="tab" id="tab-Settled" onclick="setTab('Settled')">Settled</div>
           </div>
@@ -714,6 +713,92 @@ tr:hover td{background:#FAFBFD;}
 </div><!-- end appShell -->
 
 <div class="toast-container" id="toastContainer"></div>
+
+<!-- EDIT FILING MODAL -->
+<div class="modal-backdrop" id="editModal">
+  <div class="modal" style="width:860px;">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">✏️ Edit Filing</div>
+        <div style="font-size:12px;color:var(--gray-500);margin-top:2px;" id="editRefLabel">—</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('editModal')">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="section-divider">Key Figures</div>
+      <div class="form-grid" style="margin-bottom:20px;">
+        <div class="form-group">
+          <label class="form-label">Current Pay-Off Amount</label>
+          <input id="e-payoff" class="form-input" type="number" oninput="calcEditDiff()"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Approved Settlement Amount</label>
+          <input id="e-approved" class="form-input" type="number" oninput="calcEditDiff()"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Difference <span style="color:var(--blue);font-size:11px;">⟳ Auto</span></label>
+          <input id="e-difference" class="form-input" type="number" readonly/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Vendor Fees</label>
+          <input id="e-vendor-fees" class="form-input" type="number"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Total Amount Received</label>
+          <input id="e-total-received" class="form-input" type="number" oninput="calcEditOutstanding()"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Outstanding Balance <span style="color:var(--blue);font-size:11px;">⟳ Auto</span></label>
+          <input id="e-outstanding" class="form-input" type="number" readonly/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">No. of Instalments Paid</label>
+          <input id="e-inst-paid" class="form-input" type="number"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Latest Payment Date</label>
+          <input id="e-latest-date" class="form-input" type="date"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Latest Amount Received</label>
+          <input id="e-latest-amt" class="form-input" type="number"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Approver</label>
+          <select id="e-approver" class="form-select">
+            <option value="">Select…</option>
+            <option>MUHWEZI NICHOLAS</option>
+            <option>MUGISHA SIMON PETER</option>
+            <option>SENTAMU ALLAN</option>
+            <option>ADC</option>
+            <option>KWIKIRIZA CHRISTINE</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Comments</label>
+          <textarea id="e-comments" class="form-textarea"></textarea>
+        </div>
+      </div>
+
+      <div class="section-divider">Replace Documents</div>
+      <p style="font-size:12.5px;color:var(--gray-500);margin-bottom:10px;">Upload new documents to add to this filing. Existing documents are kept unless deleted separately.</p>
+      <div class="file-drop" id="editDropZone"
+        ondragover="handleDragOver2(event)" ondragleave="handleDragLeave2(event)"
+        ondrop="handleDrop2(event)" onclick="document.getElementById('editFileInput').click()">
+        <div class="file-drop-icon">📎</div>
+        <div class="file-drop-text"><strong>Click to upload</strong> or drag &amp; drop</div>
+        <input type="file" id="editFileInput" class="hidden" multiple accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png" onchange="handleFileSelect2(event)"/>
+      </div>
+      <div class="file-list" id="editFileList"></div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('editModal')">Cancel</button>
+      <button class="btn btn-primary" id="confirmEditBtn" onclick="confirmEdit()">💾 Save Changes</button>
+    </div>
+  </div>
+</div>
 
 <!-- PAYMENT UPDATE MODAL -->
 <div class="modal-backdrop" id="paymentModal">
@@ -1063,8 +1148,13 @@ async function submitEntry() {
   for (const [id, label] of req) {
     if (!document.getElementById(id).value) { toast(`"${label}" is required.`, 'error'); return; }
   }
-  const creditAcct = document.querySelector('input[name="credit-acct"]:checked')?.value;
+  let creditAcct = document.querySelector('input[name="credit-acct"]:checked')?.value;
   if (!creditAcct) { toast('"Account To Be Credited" is required.', 'error'); return; }
+  if (creditAcct === 'Other') {
+    const otherVal = document.getElementById('f-credit-other').value.trim();
+    if (!otherVal) { toast('Please enter the account number for "Other".', 'error'); return; }
+    creditAcct = otherVal;
+  }
 
   const btn = document.getElementById('submitBtn');
   btn.disabled = true; btn.textContent = '⏳ Submitting…';
@@ -1224,6 +1314,8 @@ function resetForm(){
    'f-approver','f-notification','f-extension','f-ext-date','f-comments']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.querySelectorAll('input[name="credit-acct"]').forEach(r=>r.checked=false);
+  document.getElementById('f-credit-other').value='';
+  document.getElementById('f-credit-other').style.display='none';
   document.getElementById('ext-date-group').style.display='none';
   const now=new Date();
   document.getElementById('f-date').valueAsDate=now;
@@ -1318,7 +1410,7 @@ function renderDashboard(){
 
 // ── RECORDS ──
 function setTab(t){currentTab=t;updateTabUI();renderRecords();}
-function updateTabUI(){['all','Pending','In Progress','Settled'].forEach(t=>document.getElementById('tab-'+t)?.classList.toggle('active',t===currentTab));}
+function updateTabUI(){['all','In Progress','Settled'].forEach(t=>document.getElementById('tab-'+t)?.classList.toggle('active',t===currentTab));}
 
 function renderRecords(){
   const q=((document.getElementById('searchInput')?.value)||'').toLowerCase();
@@ -1360,10 +1452,16 @@ function actionBtns(r){
   const payBtn = (r.status === 'In Progress' || r.status === 'Pending') && currentUser?.role !== 'readonly'
     ? `<button class="btn btn-approve btn-sm" onclick="openPayment('${r.ref}')" style="white-space:nowrap;">💳 Pay</button>`
     : '';
+  // Edit: admin can edit any, user can edit their own Pending/In Progress filings
+  const canEdit = currentUser?.role === 'admin' ||
+    (currentUser?.role === 'user' && r.submittedBy === currentUser?.full_name);
+  const editBtn = canEdit
+    ? `<button class="btn btn-ghost btn-sm" onclick="openEdit('${r.ref}')" style="color:var(--blue);border-color:var(--blue);">✏️</button>`
+    : '';
   const deleteBtn = currentUser?.role === 'admin'
     ? `<button class="btn btn-flag btn-sm" onclick="deleteEntry('${r.ref}')">🗑</button>`
     : '';
-  return `<div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap;">${viewBtn}${payBtn}${deleteBtn}</div>`;
+  return `<div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap;">${viewBtn}${payBtn}${editBtn}${deleteBtn}</div>`;
 }
 
 // ── DETAIL MODAL ──
@@ -1726,6 +1824,126 @@ async function deleteEntry(ref) {
     renderRecords();
   } catch(e) {
     toast('Failed to delete: ' + e.message, 'error');
+  }
+}
+
+// ── OTHER ACCOUNT TOGGLE ──
+function toggleOtherAcct() {
+  const checked = document.querySelector('input[name="credit-acct"]:checked')?.value;
+  const otherInput = document.getElementById('f-credit-other');
+  if (otherInput) otherInput.style.display = checked === 'Other' ? 'block' : 'none';
+}
+
+// ── EDIT FILING ──
+let currentEditRef = null;
+let editSelectedFiles = [];
+
+function openEdit(ref) {
+  const r = records.find(x => x.ref === ref);
+  if (!r) return;
+  currentEditRef = ref;
+  editSelectedFiles = [];
+
+  document.getElementById('editRefLabel').textContent = `${r.ref} — ${r.name}`;
+  document.getElementById('e-payoff').value = r.payoff || '';
+  document.getElementById('e-approved').value = r.approvedAmt || '';
+  document.getElementById('e-difference').value = r.difference || '';
+  document.getElementById('e-vendor-fees').value = r.vendorFees || '';
+  document.getElementById('e-total-received').value = r.totalReceived || '';
+  document.getElementById('e-outstanding').value = r.outstandingBal || '';
+  document.getElementById('e-inst-paid').value = r.instalmentsPaid || '';
+  document.getElementById('e-latest-date').value = r.latestPayDate || '';
+  document.getElementById('e-latest-amt').value = r.latestAmt || '';
+  document.getElementById('e-approver').value = r.approver || '';
+  document.getElementById('e-comments').value = r.comments || '';
+  document.getElementById('editFileList').innerHTML = '';
+  openModal('editModal');
+}
+
+function calcEditDiff() {
+  const p = +document.getElementById('e-payoff').value || 0;
+  const a = +document.getElementById('e-approved').value || 0;
+  document.getElementById('e-difference').value = (p && a) ? p - a : '';
+  calcEditOutstanding();
+}
+
+function calcEditOutstanding() {
+  const a = +document.getElementById('e-approved').value || 0;
+  const t = +document.getElementById('e-total-received').value || 0;
+  document.getElementById('e-outstanding').value = a ? Math.max(0, a - t) : '';
+}
+
+// Edit file handlers
+function handleDragOver2(e){e.preventDefault();document.getElementById('editDropZone').classList.add('dragover');}
+function handleDragLeave2(){document.getElementById('editDropZone').classList.remove('dragover');}
+function handleDrop2(e){e.preventDefault();document.getElementById('editDropZone').classList.remove('dragover');addEditFiles(e.dataTransfer.files);}
+function handleFileSelect2(e){addEditFiles(e.target.files);e.target.value='';}
+function addEditFiles(files){
+  Array.from(files).forEach(f=>{
+    if(f.size>10*1024*1024){toast(`${f.name} exceeds 10MB`,'error');return;}
+    if(!editSelectedFiles.find(x=>x.name===f.name&&x.size===f.size))editSelectedFiles.push(f);
+  });
+  renderEditFileList();
+}
+function renderEditFileList(){
+  document.getElementById('editFileList').innerHTML = editSelectedFiles.map((f,i)=>
+    `<div class="file-item">📄 ${f.name} <span style="color:var(--gray-500);font-size:11px;margin-left:4px;">(${(f.size/1024).toFixed(0)} KB)</span>
+    <span class="file-item-remove" onclick="removeEditFile(${i})">✕</span></div>`).join('');
+}
+function removeEditFile(i){editSelectedFiles.splice(i,1);renderEditFileList();}
+
+async function confirmEdit() {
+  const r = records.find(x => x.ref === currentEditRef);
+  if (!r) return;
+
+  const btn = document.getElementById('confirmEditBtn');
+  btn.disabled = true; btn.textContent = '⏳ Saving…';
+
+  try {
+    // Upload any new files
+    const newDocPaths = [...(r.docs || [])];
+    for (const file of editSelectedFiles) {
+      const path = `${r.ref}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+      await sbStorage(path, file);
+      newDocPaths.push(path);
+    }
+
+    const totalRecv = +document.getElementById('e-total-received').value || 0;
+    const approvedAmt = +document.getElementById('e-approved').value || 0;
+    const instPaid = +document.getElementById('e-inst-paid').value || 0;
+    const newOutstanding = Math.max(0, approvedAmt - totalRecv);
+    const newStatus = totalRecv >= approvedAmt && approvedAmt > 0 ? 'Settled' : totalRecv > 0 ? 'In Progress' : 'Pending';
+    const newInstRemaining = r.numInstalments ? Math.max(0, r.numInstalments - instPaid) : r.instalmentsRemaining;
+
+    await sb(`ppb_settlements?id=eq.${r.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        payoff_amount: +document.getElementById('e-payoff').value || r.payoff,
+        approved_amount: approvedAmt || r.approvedAmt,
+        difference: (+document.getElementById('e-payoff').value||0) - (approvedAmt||0),
+        vendor_fees: +document.getElementById('e-vendor-fees').value || r.vendorFees,
+        total_received: totalRecv,
+        outstanding_balance: newOutstanding,
+        latest_pay_date: document.getElementById('e-latest-date').value || r.latestPayDate,
+        latest_amount: +document.getElementById('e-latest-amt').value || r.latestAmt,
+        instalments_paid: instPaid || r.instalmentsPaid,
+        instalments_remaining: newInstRemaining,
+        approver: document.getElementById('e-approver').value || r.approver,
+        comments: document.getElementById('e-comments').value,
+        status: newStatus,
+        docs: newDocPaths,
+        updated_at: new Date().toISOString()
+      })
+    });
+
+    closeModal('editModal');
+    toast(`${r.ref} updated successfully.`, 'success');
+    await loadRecords();
+    renderRecords();
+  } catch(e) {
+    toast('Failed to save changes: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 Save Changes';
   }
 }
 
