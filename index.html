@@ -715,6 +715,60 @@ tr:hover td{background:#FAFBFD;}
 
 <div class="toast-container" id="toastContainer"></div>
 
+<!-- PAYMENT UPDATE MODAL -->
+<div class="modal-backdrop" id="paymentModal">
+  <div class="modal" style="width:480px;">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">💳 Record Payment</div>
+        <div style="font-size:12px;color:var(--gray-500);margin-top:2px;" id="paymentRefLabel">—</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('paymentModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Summary strip -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;background:var(--gray-100);border-radius:8px;padding:14px;margin-bottom:20px;">
+        <div>
+          <div style="font-size:10.5px;font-weight:600;color:var(--gray-500);text-transform:uppercase;margin-bottom:3px;">Approved Amt</div>
+          <div style="font-weight:700;font-family:'DM Mono',monospace;" id="pay-approved">—</div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;font-weight:600;color:var(--gray-500);text-transform:uppercase;margin-bottom:3px;">Total Received</div>
+          <div style="font-weight:700;font-family:'DM Mono',monospace;" id="pay-received">—</div>
+        </div>
+        <div>
+          <div style="font-size:10.5px;font-weight:600;color:var(--gray-500);text-transform:uppercase;margin-bottom:3px;">Outstanding</div>
+          <div style="font-weight:700;font-family:'DM Mono',monospace;color:var(--red);" id="pay-outstanding">—</div>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">New Payment Amount <span class="req">*</span></label>
+          <input id="pay-amount" class="form-input" type="number" placeholder="Enter amount received" oninput="previewPayment()"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Payment Date <span class="req">*</span></label>
+          <input id="pay-date" class="form-input" type="date"/>
+        </div>
+        <div class="form-group full" id="pay-preview-wrap" style="display:none;">
+          <div style="background:var(--blue-light);border-radius:8px;padding:12px 14px;font-size:13px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <div><span style="color:var(--gray-500);">New Total Received:</span> <strong id="pay-new-total">—</strong></div>
+              <div><span style="color:var(--gray-500);">New Outstanding:</span> <strong id="pay-new-outstanding" style="color:var(--red);">—</strong></div>
+              <div><span style="color:var(--gray-500);">New Status:</span> <strong id="pay-new-status">—</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('paymentModal')">Cancel</button>
+      <button class="btn btn-primary" id="confirmPaymentBtn" onclick="confirmPayment()">💾 Save Payment</button>
+    </div>
+  </div>
+</div>
+
 <!-- DETAIL MODAL -->
 <div class="modal-backdrop" id="detailModal">
   <div class="modal">
@@ -1303,10 +1357,13 @@ function renderRecords(){
 
 function actionBtns(r){
   const viewBtn = `<button class="btn btn-ghost btn-sm" onclick="openDetail('${r.ref}')">👁 View</button>`;
-  const deleteBtn = currentUser?.role === 'admin'
-    ? `<button class="btn btn-flag btn-sm" onclick="deleteEntry('${r.ref}')" style="margin-left:4px;">🗑</button>`
+  const payBtn = (r.status === 'In Progress' || r.status === 'Pending') && currentUser?.role !== 'readonly'
+    ? `<button class="btn btn-approve btn-sm" onclick="openPayment('${r.ref}')" style="white-space:nowrap;">💳 Pay</button>`
     : '';
-  return `<div style="display:flex;gap:4px;align-items:center;">${viewBtn}${deleteBtn}</div>`;
+  const deleteBtn = currentUser?.role === 'admin'
+    ? `<button class="btn btn-flag btn-sm" onclick="deleteEntry('${r.ref}')">🗑</button>`
+    : '';
+  return `<div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap;">${viewBtn}${payBtn}${deleteBtn}</div>`;
 }
 
 // ── DETAIL MODAL ──
@@ -1549,6 +1606,99 @@ async function deleteUser(id, name) {
     await loadUsers();
   } catch(e) {
     toast('Failed to delete user: ' + e.message, 'error');
+  }
+}
+
+// ── PAYMENT UPDATE ──
+let currentPaymentRef = null;
+
+function openPayment(ref) {
+  const r = records.find(x => x.ref === ref);
+  if (!r) return;
+  currentPaymentRef = ref;
+
+  document.getElementById('paymentRefLabel').textContent = `${r.ref} — ${r.name}`;
+  document.getElementById('pay-approved').textContent = fmt(r.approvedAmt) + ' ' + r.currency;
+  document.getElementById('pay-received').textContent = fmt(r.totalReceived) + ' ' + r.currency;
+  document.getElementById('pay-outstanding').textContent = fmt(r.outstandingBal) + ' ' + r.currency;
+  document.getElementById('pay-amount').value = '';
+  document.getElementById('pay-date').valueAsDate = new Date();
+  document.getElementById('pay-preview-wrap').style.display = 'none';
+  document.getElementById('pay-new-total').textContent = '—';
+  document.getElementById('pay-new-outstanding').textContent = '—';
+  document.getElementById('pay-new-status').textContent = '—';
+  openModal('paymentModal');
+}
+
+function previewPayment() {
+  const r = records.find(x => x.ref === currentPaymentRef);
+  if (!r) return;
+  const newAmt = +document.getElementById('pay-amount').value || 0;
+  if (!newAmt) { document.getElementById('pay-preview-wrap').style.display = 'none'; return; }
+
+  const newTotal = r.totalReceived + newAmt;
+  const newOutstanding = Math.max(0, r.approvedAmt - newTotal);
+  const newStatus = newTotal >= r.approvedAmt ? 'Settled' : newTotal > 0 ? 'In Progress' : 'Pending';
+
+  document.getElementById('pay-new-total').textContent = fmt(newTotal) + ' ' + r.currency;
+  document.getElementById('pay-new-outstanding').textContent = fmt(newOutstanding) + ' ' + r.currency;
+  document.getElementById('pay-new-outstanding').style.color = newOutstanding === 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('pay-new-status').textContent = newStatus === 'Settled' ? '✅ Settled' : '⏳ In Progress';
+  document.getElementById('pay-new-status').style.color = newStatus === 'Settled' ? 'var(--green)' : 'var(--amber)';
+  document.getElementById('pay-preview-wrap').style.display = 'block';
+}
+
+async function confirmPayment() {
+  const r = records.find(x => x.ref === currentPaymentRef);
+  if (!r) return;
+
+  const newAmt = +document.getElementById('pay-amount').value || 0;
+  const payDate = document.getElementById('pay-date').value;
+
+  if (!newAmt || newAmt <= 0) { toast('Please enter a valid payment amount.', 'error'); return; }
+  if (!payDate) { toast('Please enter the payment date.', 'error'); return; }
+  if (newAmt > r.outstandingBal) {
+    if (!confirm(`Payment amount (${fmt(newAmt)}) exceeds outstanding balance (${fmt(r.outstandingBal)}). Proceed?`)) return;
+  }
+
+  const btn = document.getElementById('confirmPaymentBtn');
+  btn.disabled = true; btn.textContent = '⏳ Saving…';
+
+  try {
+    const newTotal = r.totalReceived + newAmt;
+    const newOutstanding = Math.max(0, r.approvedAmt - newTotal);
+    const newStatus = newTotal >= r.approvedAmt ? 'Settled' : 'In Progress';
+
+    // Calculate instalments paid if instalment info exists
+    let newInstPaid = r.instalmentsPaid;
+    let newInstRemaining = r.instalmentsRemaining;
+    if (r.numInstalments && r.instalmentAmt) {
+      newInstPaid = Math.min(r.numInstalments, Math.floor(newTotal / r.instalmentAmt));
+      newInstRemaining = Math.max(0, r.numInstalments - newInstPaid);
+    }
+
+    await sb(`ppb_settlements?id=eq.${r.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        latest_amount: newAmt,
+        latest_pay_date: payDate,
+        total_received: newTotal,
+        outstanding_balance: newOutstanding,
+        instalments_paid: newInstPaid,
+        instalments_remaining: newInstRemaining,
+        status: newStatus,
+        updated_at: new Date().toISOString()
+      })
+    });
+
+    closeModal('paymentModal');
+    toast(`Payment of ${fmt(newAmt)} recorded for ${r.ref}. Status: ${newStatus}`, 'success');
+    await loadRecords();
+    renderRecords();
+  } catch(e) {
+    toast('Failed to save payment: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 Save Payment';
   }
 }
 
