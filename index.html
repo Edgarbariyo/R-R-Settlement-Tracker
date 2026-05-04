@@ -633,7 +633,7 @@ tr:hover td{background:#FAFBFD;}
               <th>Ref</th><th>Date</th><th>CIF</th><th>Customer</th><th>Account</th><th>CCY</th>
               <th>Approved Amt</th><th>Pay-Off Amt</th><th>Difference</th>
               <th>Total Received</th><th>Outstanding Bal</th>
-              <th>Owner</th><th>Approver</th><th>Submitted By</th><th>Status</th><th>Docs</th><th>Actions</th>
+              <th>Vendor Fees</th><th>Fees %</th><th>Owner</th><th>Approver</th><th>Submitted By</th><th>Status</th><th>Docs</th><th>Actions</th>
             </tr></thead>
             <tbody id="recordsTbody"></tbody>
           </table>
@@ -1437,6 +1437,8 @@ function renderRecords(){
     <td><span class="amount" style="color:${r.difference>0?'var(--amber)':'var(--green)'}">${fmt(r.difference)}</span></td>
     <td><span class="amount">${fmt(r.totalReceived)}</span></td>
     <td><span class="amount" style="color:${r.outstandingBal>0?'var(--red)':'var(--green)'}">${fmt(r.outstandingBal)}</span></td>
+    <td><span class="amount">${r.vendorFees ? fmt(r.vendorFees) : '—'}</span></td>
+    <td style="font-size:12px;">${r.vendorPct ? r.vendorPct+'%' : '—'}</td>
     <td style="font-size:11.5px;">${r.owner}</td>
     <td style="font-size:11.5px;">${r.approver}</td>
     <td style="font-size:11.5px;">${r.submittedBy||'—'}</td>
